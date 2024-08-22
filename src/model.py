@@ -4,7 +4,11 @@ from tensorflow.keras import layers, models
 
 def create_transfer_learning_model(input_shape, num_classes):
     # Load the pre-trained EfficientNetB0 model without the top classification layer
-    base_model = tf.keras.applications.EfficientNetB0(
+    # base_model = tf.keras.applications.EfficientNetB0(
+    #     include_top=False,
+    #     weights='imagenet'
+    # )
+    base_model = tf.keras.applications.ConvNeXtTiny(
         include_top=False,
         weights='imagenet'
     )
