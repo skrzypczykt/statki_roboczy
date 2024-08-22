@@ -5,7 +5,6 @@ from tensorflow.keras import layers, models
 def create_transfer_learning_model(input_shape, num_classes):
     # Load the pre-trained EfficientNetB0 model without the top classification layer
     base_model = tf.keras.applications.EfficientNetB0(
-        input_shape=input_shape,
         include_top=False,
         weights='imagenet'
     )
@@ -15,6 +14,7 @@ def create_transfer_learning_model(input_shape, num_classes):
 
     # Create the model
     model = models.Sequential([
+        layers.Input(shape=input_shape),
         base_model,  # Add the pre-trained model
         layers.GlobalAveragePooling2D(),  # Pool the features
         layers.Dropout(0.5),  # Add dropout for regularization
