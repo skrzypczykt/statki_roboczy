@@ -1,2 +1,3 @@
 dataset_dir: C:\Users\skrzy\Downloads\statki_aircraft\MTARSI_Dataset
 batch_size: 64
+epochs: 1
