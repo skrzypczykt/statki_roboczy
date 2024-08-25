@@ -16,7 +16,8 @@ def create_transfer_learning_model(input_shape, num_classes):
 
     base_model = tf.keras.applications.MobileNetV3Small(
         include_top=False,
-        weights='imagenet'
+        weights='imagenet',
+        input_shape=input_shape
     )
 
     # Freeze the base model's layers to prevent them from being trained
@@ -37,4 +38,3 @@ def create_transfer_learning_model(input_shape, num_classes):
                   metrics=['accuracy'])
 
     return model
-

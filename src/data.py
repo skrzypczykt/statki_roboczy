@@ -11,14 +11,12 @@ from src import consts
 class DataGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dataset_dir, batch_size, resolution, shuffle):
+    def __init__(self, dataset_dir, resolution):
         super().__init__()
         self.dataset_dir = dataset_dir
         self.image_data = self.get_image_data()
         self.n_samples = len(self.image_data)
         self.resolution = resolution
-        self.batch_size = batch_size
-        self.shuffle = shuffle
 
     def get_image_data(self):
         image_data = []
@@ -29,21 +27,19 @@ class DataGenerator(tf.keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(self.n_samples / self.batch_size))
+        return self.n_samples
 
     def __getitem__(self, index):
         'Generate one batch of data'
         # Generate indexes of the batch
-        batch_data = self.image_data[index * self.batch_size:(index + 1) * self.batch_size]
+        sample = self.image_data[index]
 
-        Xs, ys = [], []
-        for sample in batch_data:
-            image_path = os.path.join(self.dataset_dir, sample["class_name"], sample["file_name"])
-            image = cv2.imread(filename=image_path)
-            Xs.append(self.preprocess_image(image))
-            ys.append(consts.CLASSES.index(sample["class_name"]))
+        image_path = os.path.join(self.dataset_dir, sample["class_name"], sample["file_name"])
+        image = cv2.imread(image_path)
+        x = self.preprocess_image(image)
+        y = consts.CLASSES.index(sample["class_name"])
 
-        return tf.stack(Xs), tf.stack(ys)
+        return x, [y]
 
     def preprocess_image(self, image):
 
@@ -66,19 +62,26 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return processed_image
 
-    def on_epoch_begin(self):
-        'Updates indexes after each epoch'
-        random.shuffle(self.image_data)
-
 
 def get_data_generators(params: dict):
     # Generators
-    training_generator = DataGenerator(dataset_dir=os.path.join(params['dataset_dir'], "train"),
-                                       batch_size=params['batch_size'],
-                                       resolution=consts.DATA_RESOLUTION,
-                                       shuffle=True)
-    validation_generator = DataGenerator(dataset_dir=os.path.join(params['dataset_dir'], "train"),
-                                         batch_size=params['batch_size'],
-                                         resolution=consts.DATA_RESOLUTION,
-                                         shuffle=False)
+    training_generator = tf.data.Dataset.from_generator(DataGenerator,
+                                                        args=[os.path.join(params['dataset_dir'], "train"),
+                                                              consts.DATA_RESOLUTION],
+                                                        output_signature=(
+                                                            tf.TensorSpec(
+                                                                shape=consts.DATA_RESOLUTION,
+                                                                dtype=tf.float32), tf.TensorSpec(
+                                                                shape=[1],
+                                                                dtype=tf.int32))).batch(params["batch_size"])
+
+    validation_generator = tf.data.Dataset.from_generator(DataGenerator,
+                                                          args=[os.path.join(params['dataset_dir'], "test"),
+                                                                consts.DATA_RESOLUTION],
+                                                          output_signature=(
+                                                              tf.TensorSpec(
+                                                                  shape=consts.DATA_RESOLUTION,
+                                                                  dtype=tf.float32), tf.TensorSpec(
+                                                                  shape=[1],
+                                                                  dtype=tf.int32))).batch(params["batch_size"])
     return {"training_generator": training_generator, "validation_generator": validation_generator}
