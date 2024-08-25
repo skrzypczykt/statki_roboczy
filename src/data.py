@@ -72,7 +72,8 @@ def get_data_generators(params: dict):
                                                                 shape=consts.DATA_RESOLUTION,
                                                                 dtype=tf.float32), tf.TensorSpec(
                                                                 shape=[1],
-                                                                dtype=tf.int32))).shuffle(50).batch(params["batch_size"])
+                                                                dtype=tf.int32))).shuffle(50).batch(
+        params["batch_size"]).prefetch(tf.data.AUTOTUNE)
 
     validation_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                           args=[os.path.join(params['dataset_dir'], "test"),
