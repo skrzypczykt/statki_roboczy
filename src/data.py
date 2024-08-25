@@ -33,11 +33,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         'Generate one batch of data'
         # Generate indexes of the batch
         sample = self.image_data[index]
-
         image_path = os.path.join(self.dataset_dir, sample["class_name"], sample["file_name"])
-        image = cv2.imread(image_path)
+        image = cv2.imread(r'{}'.format(image_path.decode(encoding="utf-8")))
         x = self.preprocess_image(image)
-        y = consts.CLASSES.index(sample["class_name"])
+        y = consts.CLASSES.index(sample["class_name"].decode(encoding="utf-8"))
 
         return x, [y]
 
@@ -73,7 +72,7 @@ def get_data_generators(params: dict):
                                                                 shape=consts.DATA_RESOLUTION,
                                                                 dtype=tf.float32), tf.TensorSpec(
                                                                 shape=[1],
-                                                                dtype=tf.int32))).batch(params["batch_size"])
+                                                                dtype=tf.int32))).shuffle(50).batch(params["batch_size"])
 
     validation_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                           args=[os.path.join(params['dataset_dir'], "test"),
