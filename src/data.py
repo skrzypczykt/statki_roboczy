@@ -63,25 +63,29 @@ class DataGenerator(tf.keras.utils.Sequence):
 
 
 def get_data_generators(params: dict):
+    output_signature = (
+        tf.TensorSpec(
+            shape=consts.DATA_RESOLUTION,
+            dtype=tf.float32), tf.TensorSpec(
+            shape=[1],
+            dtype=tf.int32))
     # Generators
     training_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                         args=[os.path.join(params['dataset_dir'], "train"),
                                                               consts.DATA_RESOLUTION],
-                                                        output_signature=(
-                                                            tf.TensorSpec(
-                                                                shape=consts.DATA_RESOLUTION,
-                                                                dtype=tf.float32), tf.TensorSpec(
-                                                                shape=[1],
-                                                                dtype=tf.int32))).shuffle(50).batch(
+                                                        output_signature=output_signature).shuffle(50).batch(
         params["batch_size"]).prefetch(tf.data.AUTOTUNE)
 
     validation_generator = tf.data.Dataset.from_generator(DataGenerator,
-                                                          args=[os.path.join(params['dataset_dir'], "test"),
+                                                          args=[os.path.join(params['dataset_dir'], "val"),
                                                                 consts.DATA_RESOLUTION],
-                                                          output_signature=(
-                                                              tf.TensorSpec(
-                                                                  shape=consts.DATA_RESOLUTION,
-                                                                  dtype=tf.float32), tf.TensorSpec(
-                                                                  shape=[1],
-                                                                  dtype=tf.int32))).batch(params["batch_size"])
-    return {"training_generator": training_generator, "validation_generator": validation_generator}
+                                                          output_signature=
+                                                          output_signature).batch(params["batch_size"])
+
+    test_generator = tf.data.Dataset.from_generator(DataGenerator,
+                                                    args=[os.path.join(params['dataset_dir'], "test"),
+                                                          consts.DATA_RESOLUTION],
+                                                    output_signature=output_signature).batch(params["batch_size"])
+    return {"training_generator": training_generator,
+            "validation_generator": validation_generator,
+            "test_generator": test_generator}

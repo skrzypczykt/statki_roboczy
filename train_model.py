@@ -19,4 +19,4 @@ if __name__ == "__main__":
 
     model, history = train_model(data=data, params=params)
 
-    model.evaluate(data['validation_generator'])
+    model.evaluate(data['test_generator'])
