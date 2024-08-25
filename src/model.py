@@ -14,7 +14,7 @@ def create_transfer_learning_model(input_shape, num_classes):
     #     weights='imagenet'
     # )
 
-    base_model = tf.keras.applications.ResNet50V2(
+    base_model = tf.keras.applications.MobileNetV3Small(
         include_top=False,
         weights='imagenet'
     )
