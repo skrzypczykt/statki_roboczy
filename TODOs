@@ -1,5 +1,5 @@
+0. Podniemić EffneT na coś mniejszego/ powiekszyc BS, przy 64 zużycie GPU jest na poziomie 2/15
 1. Dane walidacyjne
-0. Podniemić EffneT na coś mniejszego
 2. Metryki
 3. Setup treningu ( folder - kopia configu - logowanie do pliku - wyniki - zapis modelu - wykresy - metryki)
 4. Porównywanie wyników

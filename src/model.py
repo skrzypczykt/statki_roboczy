@@ -8,7 +8,13 @@ def create_transfer_learning_model(input_shape, num_classes):
     #     include_top=False,
     #     weights='imagenet'
     # )
-    base_model = tf.keras.applications.ConvNeXtTiny(
+
+    # base_model = tf.keras.applications.ConvNeXtTiny(
+    #     include_top=False,
+    #     weights='imagenet'
+    # )
+
+    base_model = tf.keras.applications.ResNet50V2(
         include_top=False,
         weights='imagenet'
     )
