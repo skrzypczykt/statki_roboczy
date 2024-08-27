@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 
 
-def create_transfer_learning_model(input_shape, num_classes):
+def create_transfer_learning_model(input_shape, num_classes, dropout_rate=0.5):
     # Load the pre-trained EfficientNetB0 model without the top classification layer
     # base_model = tf.keras.applications.EfficientNetB0(
     #     include_top=False,
@@ -28,7 +28,7 @@ def create_transfer_learning_model(input_shape, num_classes):
         layers.Input(shape=input_shape),
         base_model,  # Add the pre-trained model
         layers.GlobalAveragePooling2D(),  # Pool the features
-        layers.Dropout(0.5),  # Add dropout for regularization
+        layers.Dropout(dropout_rate),  # Add dropout for regularization
         layers.Dense(num_classes, activation='softmax')  # Final classification layer
     ])
 

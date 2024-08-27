@@ -1,3 +1,5 @@
 dataset_dir: C:\Users\skrzy\Downloads\statki_aircraft\MTARSI_Dataset
-batch_size: 64
+results_dir: C:\Users\skrzy\Downloads\statki_aircraft\results
+batch_size: 128 # 256 - może działać szybciej
 epochs: 1
+dropout_rate: 0.2 # zwiększać do 0.5
