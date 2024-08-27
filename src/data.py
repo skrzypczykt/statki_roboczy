@@ -73,7 +73,7 @@ def get_data_generators(params: dict):
     training_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                         args=[os.path.join(params['dataset_dir'], "train"),
                                                               consts.DATA_RESOLUTION],
-                                                        output_signature=output_signature).shuffle(50).batch(
+                                                        output_signature=output_signature).cache().shuffle(50).batch(
         params["batch_size"]).prefetch(tf.data.AUTOTUNE)
 
     validation_generator = tf.data.Dataset.from_generator(DataGenerator,
