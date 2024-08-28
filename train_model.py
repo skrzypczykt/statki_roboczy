@@ -22,9 +22,10 @@ if __name__ == "__main__":
 
     model, history = train_model(data=data, params=params)
 
-    evaluation_results = evaluate_model(model=model, data=data, limit=16)
+    evaluation_results, misclassified_examples = evaluate_model(model=model, data=data, limit=16)
 
     save_experiment_results(output_dir=output_dir,
                             model=model,
                             history=history,
-                            evaluation_results=evaluation_results)
+                            evaluation_results=evaluation_results,
+                            misclassified_examples=misclassified_examples)

@@ -1,16 +1,24 @@
 import os
+import random
+
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import yaml
+import albumentations as A
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+from src.consts import CLASSES
 
 
 def evaluate_model(model: tf.keras.Model, data: dict, limit: int):
     metrics_dict = {}
+    misclassified_examples_dict = {}
     for phase in ['training', 'validation', 'test']:
         predictions = model.predict(data[f'{phase}_generator'])
-        metrics = calculate_metrics(predictions, data[f'{phase}_generator'], limit=limit)
+        metrics, misclassified_examples = calculate_metrics(predictions, data[f'{phase}_generator'], limit=limit)
         metrics_dict[phase] = metrics
+        misclassified_examples_dict[phase] = misclassified_examples
+    return metrics_dict, misclassified_examples_dict
 
 
 def save_model_summary(output_dir, model, filename='model_summary.txt'):
@@ -33,8 +41,8 @@ def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, lim
     predicted_classes = tf.argmax(predictions, axis=1).numpy()
 
     # Convert ground truth from the dataset to a numpy array
-    ground_truth_labels = tf.concat([y[0] for x, y in ground_truth], axis=0).numpy()
-
+    ground_truth_labels = tf.concat([y[:, 0] for x, y in ground_truth], axis=0).numpy()
+    ground_truth_images = tf.concat([x for x, y in ground_truth], axis=0).numpy()
     # Calculate accuracy
     accuracy = accuracy_score(ground_truth_labels, predicted_classes)
 
@@ -48,24 +56,23 @@ def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, lim
     misclassified_examples = []
 
     # Collect the misclassified examples
-    for i, (image, label) in enumerate(ground_truth):
+    for i, (image, label) in enumerate(zip(ground_truth_images, ground_truth_labels)):
         if len(misclassified_examples) >= limit:
             break
         if i in misclassified_indices:
             misclassified_examples.append({
                 "index": i,
-                "image": image.numpy(),  # Convert TensorFlow tensor to NumPy array
-                "true_label": ground_truth_labels[i],
+                "image": image,  # Convert TensorFlow tensor to NumPy array
+                "true_label": label,
                 "predicted_label": predicted_classes[i]
             })
 
     return {
-        "accuracy": accuracy,
-        "precision": precision,
-        "recall": recall,
-        "f1_score": f1,
-        "misclassified_examples": misclassified_examples
-    }
+               "accuracy": accuracy,
+               "precision": float(precision),
+               "recall": float(recall),
+               "f1_score": float(f1),
+           }, misclassified_examples
 
 
 def save_misclassified_images(output_dir, misclassified_examples, num_images=9):
@@ -88,19 +95,23 @@ def save_misclassified_images(output_dir, misclassified_examples, num_images=9):
     side = int(num_images ** 0.5)
     assert side * side == num_images, "num_images must be a perfect square (e.g., 4, 9, 16)."
 
-    plt.figure(figsize=(12, 12))
-    for i in range(num_images):
-        if i >= len(misclassified_examples):
-            break
+    invTrans = A.Compose([A.Normalize(mean=[0., 0., 0.],
+                                      std=[1 / 0.229, 1 / 0.224, 1 / 0.225]),
+                          A.Normalize(mean=[-0.485, -0.456, -0.406],
+                                      std=[1., 1., 1.]),
+                          ])
 
+    plt.figure(figsize=(12, 12))
+    indices = random.choices(range(num_images), k=num_images)
+    for i in indices:
         example = misclassified_examples[i]
-        image = example['image']
+        image = invTrans(example['image'])['image']
         true_label = example['true_label']
         predicted_label = example['predicted_label']
 
         plt.subplot(side, side, i + 1)
         plt.imshow(image.astype("uint8"))  # Convert image to correct format for plotting
-        plt.title(f"True: {true_label}, Pred: {predicted_label}")
+        plt.title(f"True: {CLASSES[true_label]}, Pred: {CLASSES[predicted_label]}")
         plt.axis('off')
 
     plt.tight_layout()
@@ -147,7 +158,7 @@ def save_training_curves(history, output_dir: str):
     plt.close()
 
 
-def save_experiment_results(output_dir, model, history, evaluation_results):
+def save_experiment_results(output_dir, model, history, evaluation_results, misclassified_examples):
     model.save(os.path.join(output_dir, "model.keras"))
 
     with open(os.path.join(output_dir, "history.yaml"), "w") as fp:
@@ -160,5 +171,5 @@ def save_experiment_results(output_dir, model, history, evaluation_results):
 
     save_training_curves(history=history, output_dir=output_dir)
     save_misclassified_images(output_dir=output_dir,
-                              misclassified_examples=evaluation_results["test"]["misclassified_examples"],
+                              misclassified_examples=misclassified_examples["test"],
                               num_images=16)

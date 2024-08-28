@@ -7,8 +7,8 @@ def train_model(data, params):
                                            dropout_rate=params["dropout_rate"])
     model.summary()  # Print the model summary
 
-    # history = model.fit(data['training_generator'],
-    #                     validation_data=data['validation_generator'],
-    #                     epochs=params["epochs"],
-    #                     shuffle=False)# , steps_per_epoch=1, validation_steps=1
-    return model, None
+    history = model.fit(data['training_generator'],
+                        validation_data=data['validation_generator'],
+                        epochs=params["epochs"],
+                        shuffle=False)# , steps_per_epoch=1, validation_steps=1
+    return model, history
