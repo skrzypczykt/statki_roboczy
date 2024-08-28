@@ -15,7 +15,10 @@ def evaluate_model(model: tf.keras.Model, data: dict, limit: int):
     misclassified_examples_dict = {}
     for phase in ['training', 'validation', 'test']:
         predictions = model.predict(data[f'{phase}_generator'])
-        metrics, misclassified_examples = calculate_metrics(predictions, data[f'{phase}_generator'], limit=limit)
+        metrics, misclassified_examples = calculate_metrics(predictions, data[f'{phase}_generator'],
+                                                            original_images=data['original_test_images'],
+                                                            generate_missclassified_examples=phase == "test",
+                                                            limit=limit)
         metrics_dict[phase] = metrics
         misclassified_examples_dict[phase] = misclassified_examples
     return metrics_dict, misclassified_examples_dict
@@ -36,13 +39,14 @@ def save_model_summary(output_dir, model, filename='model_summary.txt'):
         model.summary(print_fn=lambda x: f.write(x + '\n'))
 
 
-def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, limit=30):
+def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, generate_missclassified_examples: bool,
+                      original_images: tf.data.Dataset, limit=30):
     # Convert predictions to class labels (i.e., get the index of the max softmax score)
     predicted_classes = tf.argmax(predictions, axis=1).numpy()
 
     # Convert ground truth from the dataset to a numpy array
     ground_truth_labels = tf.concat([y[:, 0] for x, y in ground_truth], axis=0).numpy()
-    ground_truth_images = tf.concat([x for x, y in ground_truth], axis=0).numpy()
+
     # Calculate accuracy
     accuracy = accuracy_score(ground_truth_labels, predicted_classes)
 
@@ -55,17 +59,19 @@ def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, lim
     misclassified_indices = tf.where(predicted_classes != ground_truth_labels).numpy().flatten()
     misclassified_examples = []
 
-    # Collect the misclassified examples
-    for i, (image, label) in enumerate(zip(ground_truth_images, ground_truth_labels)):
-        if len(misclassified_examples) >= limit:
-            break
-        if i in misclassified_indices:
-            misclassified_examples.append({
-                "index": i,
-                "image": image,  # Convert TensorFlow tensor to NumPy array
-                "true_label": label,
-                "predicted_label": predicted_classes[i]
-            })
+    if generate_missclassified_examples:
+        ground_truth_images = tf.concat([x for x, y in original_images], axis=0).numpy()
+        # Collect the misclassified examples
+        for i, (image, label) in enumerate(zip(ground_truth_images, ground_truth_labels)):
+            if len(misclassified_examples) >= limit:
+                break
+            if i in misclassified_indices:
+                misclassified_examples.append({
+                    "index": i,
+                    "image": image,  # Convert TensorFlow tensor to NumPy array
+                    "true_label": label,
+                    "predicted_label": predicted_classes[i]
+                })
 
     return {
                "accuracy": accuracy,
@@ -75,7 +81,7 @@ def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, lim
            }, misclassified_examples
 
 
-def save_misclassified_images(output_dir, misclassified_examples, num_images=9):
+def save_misclassified_images(output_dir, misclassified_examples, num_images):
     """
     Saves a grid of misclassified images with true and predicted labels.
 
@@ -95,22 +101,16 @@ def save_misclassified_images(output_dir, misclassified_examples, num_images=9):
     side = int(num_images ** 0.5)
     assert side * side == num_images, "num_images must be a perfect square (e.g., 4, 9, 16)."
 
-    invTrans = A.Compose([A.Normalize(mean=[0., 0., 0.],
-                                      std=[1 / 0.229, 1 / 0.224, 1 / 0.225]),
-                          A.Normalize(mean=[-0.485, -0.456, -0.406],
-                                      std=[1., 1., 1.]),
-                          ])
-
     plt.figure(figsize=(12, 12))
-    indices = random.choices(range(num_images), k=num_images)
+    indices = random.choices(range(len(misclassified_examples)), k=num_images)
     for i in indices:
         example = misclassified_examples[i]
-        image = invTrans(example['image'])['image']
+        image = example['image']
         true_label = example['true_label']
         predicted_label = example['predicted_label']
 
         plt.subplot(side, side, i + 1)
-        plt.imshow(image.astype("uint8"))  # Convert image to correct format for plotting
+        plt.imshow(image)  # Convert image to correct format for plotting
         plt.title(f"True: {CLASSES[true_label]}, Pred: {CLASSES[predicted_label]}")
         plt.axis('off')
 

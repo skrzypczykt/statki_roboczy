@@ -11,12 +11,13 @@ from src import consts
 class DataGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dataset_dir, resolution):
+    def __init__(self, dataset_dir, resolution, phase):
         super().__init__()
         self.dataset_dir = dataset_dir
         self.image_data = self.get_image_data()
         self.n_samples = len(self.image_data)
         self.resolution = resolution
+        self.phase = phase
 
     def get_image_data(self):
         image_data = []
@@ -46,15 +47,26 @@ class DataGenerator(tf.keras.utils.Sequence):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Define the Albumentations transformation pipeline
-        transform = A.Compose([
-            A.Resize(height=self.resolution[0], width=self.resolution[1]),  # Resize to target size
-            A.HorizontalFlip(p=0.5),  # Random horizontal flip
-            A.RandomBrightnessContrast(p=0.5),  # Random brightness and contrast adjustment
-            A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.5),
-            # Random shift, scale, and rotate
-            A.GaussianBlur(blur_limit=(3, 7), p=0.3),  # Random Gaussian blur
-            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),  # Normalize with ImageNet mean and std
-        ])
+        if self.phase:
+            transform = A.Compose([
+                A.Resize(height=self.resolution[0], width=self.resolution[1]),  # Resize to target size
+                A.HorizontalFlip(p=0.5),  # Random horizontal flip
+                A.RandomBrightnessContrast(p=0.5),  # Random brightness and contrast adjustment
+                A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.5),
+                # Random shift, scale, and rotate
+                A.GaussianBlur(blur_limit=(3, 7), p=0.3),  # Random Gaussian blur
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),  # Normalize with ImageNet mean and std
+            ])
+        elif self.phase == "original_test":
+            transform = A.Compose([
+                A.Resize(height=self.resolution[0], width=self.resolution[1]),  # Resize to target size
+                # Normalize with ImageNet mean and std
+            ])
+        else:
+            transform = A.Compose([
+                A.Resize(height=self.resolution[0], width=self.resolution[1]),  # Resize to target size
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)), # Normalize with ImageNet mean and std
+            ])
         # Apply the transformations
         augmented = transform(image=image)
         processed_image = augmented['image']
@@ -72,20 +84,27 @@ def get_data_generators(params: dict):
     # Generators
     training_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                         args=[os.path.join(params['dataset_dir'], "train"),
-                                                              consts.DATA_RESOLUTION],
+                                                              consts.DATA_RESOLUTION, "train"],
                                                         output_signature=output_signature).cache().shuffle(50).batch(
         params["batch_size"]).prefetch(tf.data.AUTOTUNE)
 
     validation_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                           args=[os.path.join(params['dataset_dir'], "val"),
-                                                                consts.DATA_RESOLUTION],
+                                                                consts.DATA_RESOLUTION, "val"],
                                                           output_signature=
                                                           output_signature).batch(params["batch_size"])
 
     test_generator = tf.data.Dataset.from_generator(DataGenerator,
                                                     args=[os.path.join(params['dataset_dir'], "test"),
-                                                          consts.DATA_RESOLUTION],
+                                                          consts.DATA_RESOLUTION, "test"],
                                                     output_signature=output_signature).batch(params["batch_size"])
+    original_test_images = tf.data.Dataset.from_generator(DataGenerator,
+                                                    args=[os.path.join(params['dataset_dir'], "test"),
+                                                          consts.DATA_RESOLUTION, "original_test"],
+                                                    output_signature=output_signature).batch(params["batch_size"])
+
+
     return {"training_generator": training_generator,
             "validation_generator": validation_generator,
-            "test_generator": test_generator}
+            "test_generator": test_generator,
+            "original_test_images": original_test_images}
