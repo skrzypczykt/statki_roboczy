@@ -57,15 +57,14 @@ def calculate_metrics(predictions: tf.Tensor, ground_truth: tf.data.Dataset, gen
 
     # Identify misclassified examples
     misclassified_indices = tf.where(predicted_classes != ground_truth_labels).numpy().flatten()
+    selected_missclassified_indices = random.choices(misclassified_indices, k=limit)
     misclassified_examples = []
 
     if generate_missclassified_examples:
         ground_truth_images = tf.concat([x for x, y in original_images], axis=0).numpy()
         # Collect the misclassified examples
         for i, (image, label) in enumerate(zip(ground_truth_images, ground_truth_labels)):
-            if len(misclassified_examples) >= limit:
-                break
-            if i in misclassified_indices:
+            if i in selected_missclassified_indices:
                 misclassified_examples.append({
                     "index": i,
                     "image": image,  # Convert TensorFlow tensor to NumPy array
